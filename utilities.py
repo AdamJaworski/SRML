@@ -1,9 +1,11 @@
 import cv2
 import numpy as np
 import torchvision.transforms.functional as FT
+import torch
 
 
 def convert_image(image, target):
+
     if target == "torch":
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         img_tensor = FT.to_tensor(image)
