@@ -23,7 +23,10 @@ def create_full_hd() -> bool:
                 print(f"{file} couldn't be read")
                 continue
 
-        size = (1920, int(img.shape[0] / (img.shape[1] / 1920)))
+        if img.shape[1] >= img.shape[0]:
+            size = (1920, int(img.shape[0] / (img.shape[1] / 1920)))
+        else:
+            size = (int(img.shape[1] / (img.shape[0] / 1920)), 1920)
         img = cv2.resize(img, size, interpolation=cv2.INTER_LANCZOS4)
 
         i = 1
@@ -48,6 +51,7 @@ def create_low_res() -> bool:
                 print(f"{file} couldn't be read")
                 continue
 
+        # TODO Round up
         img = cv2.resize(img, (int(img.shape[1] / 2), int(img.shape[0] / 2)), interpolation=cv2.INTER_LANCZOS4)
         cv2.imwrite(f"{low_res_path}{file}", img)
         print(f"Resized photos:  {index}/{len(full_hd_files)}")

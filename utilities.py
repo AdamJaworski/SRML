@@ -14,6 +14,7 @@ def convert_image(image, target):
 
     if target == "cv2":
         image = image.squeeze()
+
         image = image.float() * 255.0
         image = image.numpy()
         image = np.clip(image, 0, 255)

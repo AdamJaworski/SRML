@@ -1,5 +1,4 @@
 import pathlib
-
 import numpy.random
 from time import time
 from model import Model
@@ -13,9 +12,9 @@ from utilities import convert_image
 full_hd_path = r'./data/gt/full_hd/'
 low_res_path = r'./data/lr/'
 output_path  = r'./data/out/'
-model_state   = r'./data/model.pth'
+model_state   = r'./data/model_new.pth'
 
-run_id = 'Theta'
+run_id = '_Alpha'
 
 
 def train_model(model_, loss_function, optimizer, data_list, gt_list) -> None:
@@ -75,8 +74,8 @@ def train_model(model_, loss_function, optimizer, data_list, gt_list) -> None:
 
 
 def get_statistics(epoch, index, len_, photo, running_loss, end, nn_output, setup, start) -> None:
-    print(
-        f"epoch: {epoch:2}, finished: {index + 1:3}/{len_}, image: {photo:7}, loss: {running_loss:.3}, ttb: {end - nn_output :.4}s, ttp: {nn_output - setup:.4}s, total time: {end - start:.4}s")
+    print(f"epoch: {epoch:2}, finished: {index + 1:3}/{len_}, image: {photo:7}, loss: {running_loss * 100:.3}, "
+          f"ttb: {end - nn_output :.4}s, ttp: {nn_output - setup:.4}s, total time: {end - start:.4}s")
 
 
 if __name__ == "__main__":
