@@ -6,18 +6,15 @@ class Model(nn.Module):
     def __init__(self):
         super().__init__()
         self.sequence = nn.Sequential(
-            nn.Conv2d(3, 128, 9, padding=4, stride=1),
+            nn.Conv2d(3, 256, 1, padding=1),
+            nn.BatchNorm2d(256),
+            nn.PixelShuffle(2),
             nn.PReLU(),
-            nn.Conv2d(128, 64, 1, padding=1),
-            nn.BatchNorm2d(64),
             nn.Conv2d(64, 64, 3, padding=1),
             nn.BatchNorm2d(64),
             nn.PReLU(),
-            nn.Conv2d(64, 256, 3, padding=1),
-            nn.PixelShuffle(2),
-            nn.PReLU(),
             nn.Conv2d(64, 3, 9, padding=2),
-            nn.Tanh()
+            nn.Sigmoid()
         )
 
     def forward(self, x):
