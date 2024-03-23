@@ -31,8 +31,6 @@ def compare_results(run_id):
     output_path = r'./data/out/'
     full_hd_bicubic_path = r'./data/gt/full_hd_bicubic/'
 
-    run_id = 'Alpha'
-
     file_list = os.listdir(output_path + run_id)
 
     random_photos = [x for x in random.choices(file_list, k=10)]
@@ -53,4 +51,4 @@ def compare_results(run_id):
 
 
 if __name__ == "__main__":
-    compare_results('test')
+    compare_results('Beta')
