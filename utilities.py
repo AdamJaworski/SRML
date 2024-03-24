@@ -1,4 +1,5 @@
 import os
+import pathlib
 import random
 import cv2
 import numpy as np
@@ -34,6 +35,7 @@ def compare_results(run_id):
     file_list = os.listdir(output_path + run_id)
 
     random_photos = [x for x in random.choices(file_list, k=10)]
+    # random_photos = ['1_58.png', '1_59.png', '1_60.png', '1_1.png', '1_2.png', '1_7.png', '1_227.png']
 
     ssim = SSIM()
     with torch.no_grad():
@@ -51,4 +53,4 @@ def compare_results(run_id):
 
 
 if __name__ == "__main__":
-    compare_results('Beta')
+    compare_results('Delta')

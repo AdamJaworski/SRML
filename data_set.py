@@ -17,13 +17,17 @@ def create_full_hd() -> bool:
     for index, file in enumerate(high_res_files):
         img = cv2.imread(high_res_path + file)
 
-        if img is None:
-            raw = rawpy.imread(high_res_path + file)
-            img = raw.postprocess()
-            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        try:
             if img is None:
-                print(f"{file} couldn't be read")
-                continue
+                raw = rawpy.imread(high_res_path + file)
+                img = raw.postprocess()
+                img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+                if img is None:
+                    print(f"{file} couldn't be read")
+                    continue
+        except Exception as e:
+            print(high_res_path + file)
+            continue
 
         if img.shape[1] >= img.shape[0]:
             size2 = int(math.ceil(img.shape[0] / (img.shape[1] / 1920)))
@@ -74,6 +78,17 @@ def create_low_res() -> bool:
         print(f"Resized photos:  {index}/{len(full_hd_files)}")
 
     return True
+
+
+def rename_high():
+    high_res = r'./data/gt/high_res/'
+    files = os.listdir(high_res)
+    i = 0
+    for file in files:
+        while pathlib.Path.exists(pathlib.Path(high_res + str(i) + '.png')):
+            i += 1
+        os.rename(high_res + file, high_res + str(i) + '.png')
+        i += 1
 
 
 if __name__ == "__main__":

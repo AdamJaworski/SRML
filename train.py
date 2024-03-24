@@ -1,34 +1,38 @@
 import pathlib
+from datetime import datetime
 import numpy.random
 from time import time
 from model import Model
 import cv2
 import torch
-import torch.nn as nn
+from path_manager import PathManager
 import torch.optim as optim
 from piqa import SSIM
 import os
 from utilities import convert_image
+from train_options import opt
 
 full_hd_path = r'./data/gt/full_hd/'
 low_res_path = r'./data/lr/'
 output_path  = r'./data/out/'
-model_state   = r'./data/'
 
-run_id = 'Beta'
+model_path_manager = None
 
 
 def train_model(model_, loss_function, optimizer, data_list, gt_list) -> None:
+    epoch             = opt.STARTING_EPOCH
+    processed_images  = 0
+    processed_images_ = 0
+    highest_loss      = 0
+    lowest_loss       = 1
+    total_time        = 0.0
 
-    if not pathlib.Path.exists(pathlib.Path(output_path + run_id)):
-        pathlib.Path(output_path + run_id).mkdir()
-
-    epoch = 0
     while True:
         epoch += 1
         total_loss = 0.0
         errors = 0
         numpy.random.shuffle(data_list)
+
         for index, photo in enumerate(data_list):
             start = time()
 
@@ -41,9 +45,7 @@ def train_model(model_, loss_function, optimizer, data_list, gt_list) -> None:
             running_loss = 0.0
             optimizer.zero_grad()
 
-            setup = time()
             output_tensor = model_(input_tensor)
-            nn_output = time()
 
             try:
                 loss = 1 - loss_function(output_tensor, gt_tensor)
@@ -60,36 +62,70 @@ def train_model(model_, loss_function, optimizer, data_list, gt_list) -> None:
             total_loss += running_loss
             end = time()
 
-            get_statistics(epoch, index, len(data_list), photo, running_loss, end, nn_output, setup, start)
-            output_tensor = output_tensor.detach()
-            output_cv2 = convert_image(output_tensor, 'cv2')
-            cv2.imwrite(output_path + run_id + "/" + str(epoch) + "_" + photo, output_cv2)
+            if running_loss < lowest_loss:
+                lowest_loss = running_loss
+            if running_loss > highest_loss:
+                highest_loss = running_loss
 
-            if pathlib.Path.exists(pathlib.Path(model_state + 'model_' + run_id + '.pth')):
-                pathlib.Path.unlink(pathlib.Path(model_state + 'model_' + run_id + '.pth'))
+            processed_images  += 1
+            processed_images_ += 1
+            total_time += end - start
 
-            torch.save(model_.state_dict(), model_state + 'model_' + run_id + '.pth')
-        end_of_epoch_summary(total_loss, errors, len(data_list), epoch)
+            if processed_images % opt.SAVE_MODEL_AFTER == 0:
+                save_model(model_, f'{processed_images}_{epoch}')
+
+            if processed_images % opt.PRINT_RESULTS == 0:
+                save_output(output_tensor, epoch, photo)
+                get_stats(epoch, total_loss, errors, processed_images_, total_time, lowest_loss, highest_loss)
+                total_loss, errors, processed_images_, total_time, lowest_loss, highest_loss = 0.0, 0, 0, 0.0, 1, 0
 
 
-def get_statistics(epoch, index, len_, photo, running_loss, end, nn_output, setup, start) -> None:
-    print(f"epoch: {epoch:2}, finished: {index + 1:3}/{len_}, image: {photo:7}, loss: {running_loss:4.3}, "
-          f"similarity: {(1 - round(running_loss, 3)) * 100}%, ttb: {end - nn_output :4.4}s, ttp: {nn_output - setup:4.4}s, "
-          f"total time: {end - start:4.4}s")
+def save_output(output_tensor, epoch, name):
+    output_tensor = output_tensor.detach()
+    output_cv2 = convert_image(output_tensor, 'cv2')
+    image = str(epoch) + '_' + name
+    cv2.imwrite(str(model_path_manager.out_path) + '/' + image, output_cv2)
 
 
-def end_of_epoch_summary(total_loss, errors, total_images, epoch) -> None:
-    epoch_report = open(output_path + run_id + '.txt', 'a+')
-    summary_message = f"Finished {epoch} epoch: Processed {total_images} total images, with {errors} errors. " \
-                      f"Avg loss was: {total_loss/(total_images - errors):4.4}, Avg"
-    epoch_report.write(summary_message + '\n')
+def save_model(model_instance, name_of_save: str):
+    # Current save
+    if pathlib.Path.exists(model_path_manager.root_path / (name_of_save + '.pth')):
+        pathlib.Path.unlink(model_path_manager.root_path / (name_of_save + '.pth'))
+    torch.save(model_instance.state_dict(), model_path_manager.root_path / (name_of_save + '.pth'))
+
+    # Latest save
+    if pathlib.Path.exists(model_path_manager.root_path / 'latest.pth'):
+        pathlib.Path.unlink(model_path_manager.root_path / 'latest.pth')
+    torch.save(model_instance.state_dict(), model_path_manager.root_path / 'latest.pth')
+
+
+def get_stats(epoch, total_loss, errors, total_images, total_time, lowest_loss, highest_loss) -> None:
+    loss_file = open(model_path_manager.loss_file, 'a+')
+    summary_message = f"(epoch: {epoch}, iters: {total_images}, errors: {errors}, time: {total_time:.3}s) " \
+                      f"a_loss: {total_loss/total_images:.3}, a_SSIM: {round(1 - total_loss/total_images, 3) * 100:.3f}%, " \
+                      f"a_time: {total_time/total_images:.3}, b_SSIM: {round(1 - lowest_loss, 3) * 100:.3f}%, " \
+                      f"l_SSIM: {round(1 - highest_loss, 3) * 100:.3f}%"
+    print(summary_message)
+    loss_file.write(summary_message + '\n')
+    loss_file.close()
 
 
 if __name__ == "__main__":
-    model__ = Model()
-    model__ = torch.jit.script(model__)
-    if pathlib.Path.exists(pathlib.Path(model_state + 'model.pth')):
-        model__.load_state_dict(torch.load(model_state + 'model.pth'))
+    torch.set_num_threads(1)
+    model = Model()
     loss_function_ = SSIM()
-    train_model(model__, loss_function_, optim.Adam(model__.parameters(), lr=1e-4), os.listdir(low_res_path), os.listdir(full_hd_path))
+    model_path_manager = PathManager(opt.MODEL)
+    model = torch.jit.script(model)
+
+    if opt.CONTINUE_LEARNING:
+        model.load_state_dict(torch.load(model_path_manager.root_path / 'latest.pth'))
+
+    loss_file = open(model_path_manager.loss_file, 'a+')
+    dt_string = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    start_message = '='*50 + f'{dt_string}' + '='*50
+    loss_file.write(start_message + '\n')
+    loss_file.close()
+
+    print(f"Starting training with rate: {opt.LR}")
+    train_model(model, loss_function_, optim.Adam(model.parameters(), lr=opt.LR), os.listdir(low_res_path), os.listdir(full_hd_path))
 
