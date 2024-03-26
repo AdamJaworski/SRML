@@ -75,15 +75,15 @@ def train_model(model_, loss_function, optimizer, data_list, gt_list) -> None:
                 save_model(model_, f'{processed_images}_{epoch}')
 
             if processed_images % opt.PRINT_RESULTS == 0:
-                save_output(output_tensor, epoch, photo)
+                save_output(output_tensor, epoch, processed_images, photo)
                 get_stats(epoch, total_loss, errors, processed_images_, total_time, lowest_loss, highest_loss)
                 total_loss, errors, processed_images_, total_time, lowest_loss, highest_loss = 0.0, 0, 0, 0.0, 1, 0
 
 
-def save_output(output_tensor, epoch, name):
+def save_output(output_tensor, epoch, processed_images, name):
     output_tensor = output_tensor.detach()
     output_cv2 = convert_image(output_tensor, 'cv2')
-    image = str(epoch) + '_' + name
+    image = str(epoch) + '_' + str(processed_images) + '_' + name
     cv2.imwrite(str(model_path_manager.out_path) + '/' + image, output_cv2)
 
 
@@ -111,7 +111,7 @@ def get_stats(epoch, total_loss, errors, total_images, total_time, lowest_loss, 
 
 
 if __name__ == "__main__":
-    torch.set_num_threads(1)
+    # torch.set_num_threads(1)
     model = Model()
     loss_function_ = SSIM()
     model_path_manager = PathManager(opt.MODEL)

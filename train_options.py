@@ -11,7 +11,7 @@ def add_argument(**kwargs):
         setattr(opt, key, value)
 
 
-add_argument(SAVE_MODEL_AFTER=20)
+add_argument(SAVE_MODEL_AFTER=50)
 add_argument(PRINT_RESULTS=20)
 add_argument(CONTINUE_LEARNING=True)
 add_argument(MODEL='Alpha')
